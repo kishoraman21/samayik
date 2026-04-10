@@ -1,0 +1,23 @@
+{
+  "patient_id": "P-1023",
+  "name": "Rohit Sharma",
+  "age": "45 yrs",
+  "gender": "M",
+  "blood_group": "B+",
+  "allergies": "penicillin",
+  "vitals": {
+    "bp": "140/90",
+    "heart_rate": 92,
+    "temp": "99F"
+  },
+  "diagnosis": "Type 2 Diabetes",
+  "medications": [
+    {"name": "Metformin", "dose": "500mg", "freq": "BD"},
+    {"name": "Atorvastatin", "dose": "10 mg", "freq": "OD"}
+  ],
+  "lab_results": {
+    "HbA1c": "8.5%",
+    "fasting_glucose": "150 mg/dL"
+  },
+  "last_visit": "12-03-24"
+}
