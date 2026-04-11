@@ -2,10 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 
-// ─────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────
-
+// ─── Types ──────────────────────────────────
 interface MappedField {
   status: "MAPPED" | "UNKNOWN";
   raw_field: string;
@@ -17,7 +14,6 @@ interface MappedField {
   category?: string;
   unit?: string | null;
   confidence: number;
-  note?: string;
 }
 
 interface DRIResult {
@@ -29,10 +25,6 @@ interface DRIResult {
 }
 
 interface AlertResult {
-  alert_level: string;
-  dri_score: number;
-  message: string;
-  missing_fields: string[];
   recommendation: string;
 }
 
@@ -47,627 +39,338 @@ interface ConvertResult {
   error?: string;
 }
 
-// ─────────────────────────────────────────────
-// Main Page
-// ─────────────────────────────────────────────
+// ─── Empty State Flow Diagram ────────────────
+const PipelineDiagram = () => (
+  <div className="h-full flex flex-col items-center justify-center p-6 text-center select-none overflow-y-auto">
+    <div className="flex items-center gap-2 mb-2 bg-slate-100 border border-slate-200 px-3 py-1 rounded-full text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+      <div className="status-dot"></div> System Idle
+    </div>
+    
+    <h3 className="text-lg font-bold text-slate-800 mb-8 mt-2">Samayik Architecture</h3>
+    
+    <div className="w-full max-w-[280px] flex flex-col items-center">
+      <div className="w-full bg-white border border-slate-200 py-3 rounded-lg text-xs font-semibold text-slate-600 shadow-sm relative z-10">
+        Raw Clinical Data
+        <div className="text-[10px] text-slate-400 font-normal mt-0.5">CSV, JSON, SQL, XML</div>
+      </div>
+      
+      <div className="flow-line -my-1 relative z-0"></div>
+      
+      <div className="w-full bg-emerald-50 border border-emerald-200 p-4 rounded-xl shadow-sm relative z-10">
+        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-white px-2 text-[10px] text-emerald-600 font-bold border border-emerald-200 rounded-full uppercase">Engine</div>
+        <p className="text-emerald-800 text-sm font-bold">Semantic Mapper</p>
+        <p className="text-emerald-600/80 text-[10px] font-mono mt-1">all-MiniLM-L6-v2</p>
+      </div>
 
+      <div className="flow-line -my-1 relative z-0"></div>
+      
+      <div className="w-full flex gap-3 relative z-10">
+        <div className="flex-1 bg-blue-50 border border-blue-200 py-3 rounded-lg text-[10px] font-semibold text-blue-800 shadow-sm">
+          Schema Guard<br/><span className="font-normal text-blue-600/80">Deterministic</span>
+        </div>
+        <div className="flex-1 bg-purple-50 border border-purple-200 py-3 rounded-lg text-[10px] font-semibold text-purple-800 shadow-sm">
+          Knowledge Graph<br/><span className="font-normal text-purple-600/80">LOINC Embeddings</span>
+        </div>
+      </div>
+
+      <div className="flow-line -my-1 relative z-0"></div>
+
+      <div className="w-full bg-slate-800 border border-slate-700 py-3 rounded-lg text-xs font-semibold text-slate-200 shadow-sm relative z-10">
+        FHIR R4 Generation
+      </div>
+    </div>
+  </div>
+);
+
+// ─── Loading State Animation ─────────────────
+const ProcessingAnimation = () => (
+  <div className="h-full flex flex-col items-center justify-center p-6 text-center select-none overflow-y-auto">
+    <div className="flex items-center gap-2 mb-2 bg-emerald-100 border border-emerald-200 px-3 py-1 rounded-full text-[10px] uppercase font-bold text-emerald-700 tracking-wider">
+      <div className="status-dot"></div> Processing
+    </div>
+    
+    <h3 className="text-lg font-bold text-slate-800 mb-8 mt-2">Running AI Pipeline</h3>
+    
+    <div className="w-full max-w-[280px] flex flex-col items-center">
+      <div className="w-full bg-slate-50 border border-slate-200 py-3.5 rounded-lg shadow-sm relative z-10 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-200/50 to-transparent w-full skeleton-shimmer"></div>
+        <div className="relative text-xs font-semibold text-slate-400">Parsing Raw Data...</div>
+      </div>
+      
+      <div className="flow-line -my-1 relative z-0"></div>
+      
+      <div className="w-full bg-emerald-50 border border-emerald-200 py-5 rounded-xl shadow-sm relative z-10 overflow-hidden flex items-center justify-center gap-2">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-100/50 to-transparent w-full skeleton-shimmer" style={{animationDelay: '0.2s'}}></div>
+        <svg className="w-4 h-4 text-emerald-500 animate-spin relative" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span className="relative text-emerald-700 text-sm font-bold">Semantic Mapping</span>
+      </div>
+
+      <div className="flow-line -my-1 relative z-0"></div>
+      
+      <div className="w-full flex gap-3 relative z-10">
+        <div className="flex-1 bg-blue-50/50 border border-blue-100 py-4 rounded-lg shadow-sm overflow-hidden relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-100/50 to-transparent w-full skeleton-shimmer" style={{animationDelay: '0.4s'}}></div>
+        </div>
+        <div className="flex-1 bg-purple-50/50 border border-purple-100 py-4 rounded-lg shadow-sm overflow-hidden relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-100/50 to-transparent w-full skeleton-shimmer" style={{animationDelay: '0.5s'}}></div>
+        </div>
+      </div>
+
+      <div className="flow-line -my-1 relative z-0"></div>
+
+      <div className="w-full bg-slate-100 border border-slate-200 py-3.5 rounded-lg shadow-sm relative z-10 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-200/50 to-transparent w-full skeleton-shimmer" style={{animationDelay: '0.6s'}}></div>
+      </div>
+    </div>
+  </div>
+);
+
+// ─── Main Application ───────────────────────
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ConvertResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showBundle, setShowBundle] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  // Patient metadata
+  // Form State
   const [patientId, setPatientId] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [dob, setDob] = useState("");
-  const [gender, setGender] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const resultsRef = useRef<HTMLDivElement>(null);
 
-  // Drag & Drop handlers
-  const handleDragOver = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      if (!isDragging) setIsDragging(true);
-    },
-    [isDragging]
-  );
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  }, []);
-
+  // ─── Handlers ──────────────────────────────
+  const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); if (!isDragging) setIsDragging(true); }, [isDragging]);
+  const handleDragLeave = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); }, []);
   const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const droppedFile = e.dataTransfer.files?.[0];
-    if (droppedFile) {
-      setFile(droppedFile);
-      setResult(null);
-      setError(null);
-    }
+    e.preventDefault(); setIsDragging(false);
+    const f = e.dataTransfer.files?.[0];
+    if (f) { setFile(f); setResult(null); setError(null); }
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-      setResult(null);
-      setError(null);
-    }
+    const f = e.target.files?.[0];
+    if (f) { setFile(f); setResult(null); setError(null); }
   };
 
-  // Convert
   const handleConvert = async () => {
     if (!file) return;
-
-    setIsLoading(true);
-    setError(null);
-    setResult(null);
+    setIsLoading(true); setError(null); setResult(null);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("patient_id", patientId || "UNKNOWN");
-      formData.append("first_name", firstName);
-      formData.append("last_name", lastName);
-      formData.append("dob", dob);
-      formData.append("gender", gender);
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("patient_id", patientId || "UNKNOWN");
+      fd.append("first_name", firstName);
+      fd.append("last_name", lastName);
 
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
-      const res = await fetch(`${apiBase}/convert`, {
-        method: "POST",
-        body: formData,
-      });
-
-      const data: ConvertResult = await res.json();
-
-      if (!data.success) {
-        setError(data.error || "Conversion failed.");
-      } else {
-        setResult(data);
-        setTimeout(() => {
-          resultsRef.current?.scrollIntoView({ behavior: "smooth" });
-        }, 100);
-      }
+      const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${base}/convert`, { method: "POST", body: fd });
+      const data = await res.json();
+      
+      if (!data.success) setError(data.error || "Failed");
+      else setResult(data);
     } catch {
-      setError("Failed to connect to conversion service.");
+      setError("Failed to connect to Samayik API.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Download
   const handleDownload = () => {
     if (!result?.fhir_bundle) return;
-    const blob = new Blob(
-      [JSON.stringify(result.fhir_bundle, null, 2)],
-      { type: "application/json" }
-    );
+    const blob = new Blob([JSON.stringify(result.fhir_bundle, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url;
-    a.download = `fhir_bundle_${patientId || "patient"}_${Date.now()}.json`;
-    a.click();
+    a.href = url; a.download = `bundle.json`; a.click();
     URL.revokeObjectURL(url);
   };
 
-  const getFileIcon = () => {
-    if (!file) return "📁";
-    const ext = file.name.split(".").pop()?.toLowerCase();
-    if (ext === "csv") return "📊";
-    if (ext === "json") return "📋";
-    if (ext === "sql") return "🗃️";
-    return "📄";
-  };
-
-  const getRiskColor = (level: string) => {
-    if (level === "HIGH RISK") return "text-danger";
-    if (level === "MEDIUM RISK") return "text-warning";
-    return "text-success";
-  };
-
-  const getRiskBg = (level: string) => {
-    if (level === "HIGH RISK") return "bg-danger/10 border-danger/20";
-    if (level === "MEDIUM RISK") return "bg-warning/10 border-warning/20";
-    return "bg-success/10 border-success/20";
-  };
-
-  const getConfidenceColor = (conf: number) => {
-    if (conf >= 0.4) return "bg-success";
-    if (conf >= 0.2) return "bg-warning";
-    return "bg-danger";
+  const handleCopy = () => {
+    if (!result?.fhir_bundle) return;
+    navigator.clipboard.writeText(JSON.stringify(result.fhir_bundle, null, 2));
+    setCopied(true); setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="border-b border-card-border bg-card/50 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-accent to-cyan-600 flex items-center justify-center text-lg font-bold text-black">
-              S
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold tracking-tight">
-                Samayik AI
-              </h1>
-              <p className="text-xs text-muted">FHIR R4 Converter</p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            {["CSV", "JSON", "SQL", "XML"].map((fmt) => (
-              <span
-                key={fmt}
-                className="text-[11px] px-2.5 py-1 rounded-full bg-card border border-card-border text-muted font-mono"
-              >
-                {fmt}
-              </span>
-            ))}
-          </div>
+    <div className="h-screen w-full flex flex-col bg-slate-50 overflow-hidden text-slate-800">
+      
+      {/* ─── Header ─── */}
+      <header className="h-12 bg-white border-b border-slate-200 flex items-center justify-between px-4 shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="w-6 h-6 rounded bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">S</div>
+          <span className="font-bold text-[15px] tracking-tight text-slate-800">Samayik</span>
+        </div>
+        <div className="flex items-center">
+          <a href="https://hl7.org/fhir/R4/" target="_blank" rel="noopener noreferrer" className="text-[11px] font-semibold text-slate-400 hover:text-emerald-600 transition-colors uppercase tracking-wider">
+            FHIR R4 Reference ↗
+          </a>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-6xl mx-auto px-6 py-12 w-full">
-        {/* Hero */}
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold tracking-tight mb-4 bg-gradient-to-r from-white via-foreground to-muted bg-clip-text text-transparent">
-            Transform Hospital Data to
-            <br />
-            <span className="bg-gradient-to-r from-accent to-cyan-400 bg-clip-text text-transparent">
-              FHIR R4 Standard
-            </span>
-          </h2>
-          <p className="text-muted text-lg max-w-2xl mx-auto">
-            Upload messy patient records in any format. Our AI maps fields to
-            official LOINC codes and builds compliant FHIR R4 bundles — instantly.
-          </p>
-        </div>
-
-        {/* Upload Section */}
-        <div className="glass-card p-8 mb-8">
-          <div
-            className={`upload-zone p-12 text-center ${isDragging ? "dragging" : ""}`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv,.json,.sql,.txt,.xml"
-              onChange={handleFileChange}
-              className="hidden"
-              id="file-upload"
-            />
-            {file ? (
-              <div className="fade-up">
-                <div className="text-4xl mb-3">{getFileIcon()}</div>
-                <p className="text-lg font-medium">{file.name}</p>
-                <p className="text-sm text-muted mt-1">
-                  {(file.size / 1024).toFixed(1)} KB •{" "}
-                  {file.name.split(".").pop()?.toUpperCase()}
-                </p>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setFile(null);
-                    setResult(null);
-                  }}
-                  className="mt-3 text-sm text-muted hover:text-danger transition-colors"
-                >
-                  Remove & choose another
-                </button>
-              </div>
-            ) : (
-              <div>
-                <div className="text-5xl mb-4 opacity-40">⬆️</div>
-                <p className="text-lg text-foreground/80 font-medium">
-                  Drop your file here or click to browse
-                </p>
-                <p className="text-sm text-muted mt-2">
-                  Supports CSV, JSON, and SQL INSERT dumps
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Patient Metadata */}
-        <div className="glass-card p-6 mb-8">
-          <h3 className="text-sm font-medium text-muted mb-4 uppercase tracking-wider">
-            Patient Information{" "}
-            <span className="text-muted/50 normal-case tracking-normal font-normal">
-              (optional — enriches the FHIR Bundle)
-            </span>
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div>
-              <label
-                htmlFor="patient-id"
-                className="text-xs text-muted mb-1 block"
-              >
-                Patient ID
-              </label>
-              <input
-                id="patient-id"
-                type="text"
-                placeholder="P001"
-                value={patientId}
-                onChange={(e) => setPatientId(e.target.value)}
-                className="w-full bg-background border border-card-border rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted/40 focus:outline-none focus:border-accent/50 transition-colors"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="first-name"
-                className="text-xs text-muted mb-1 block"
-              >
-                First Name
-              </label>
-              <input
-                id="first-name"
-                type="text"
-                placeholder="Raj"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                className="w-full bg-background border border-card-border rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted/40 focus:outline-none focus:border-accent/50 transition-colors"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="last-name"
-                className="text-xs text-muted mb-1 block"
-              >
-                Last Name
-              </label>
-              <input
-                id="last-name"
-                type="text"
-                placeholder="Sharma"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                className="w-full bg-background border border-card-border rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted/40 focus:outline-none focus:border-accent/50 transition-colors"
-              />
-            </div>
-            <div>
-              <label htmlFor="dob" className="text-xs text-muted mb-1 block">
-                Date of Birth
-              </label>
-              <input
-                id="dob"
-                type="date"
-                value={dob}
-                onChange={(e) => setDob(e.target.value)}
-                className="w-full bg-background border border-card-border rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted/40 focus:outline-none focus:border-accent/50 transition-colors"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="gender"
-                className="text-xs text-muted mb-1 block"
-              >
-                Gender
-              </label>
-              <select
-                id="gender"
-                value={gender}
-                onChange={(e) => setGender(e.target.value)}
-                className="w-full bg-background border border-card-border rounded-lg px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-accent/50 transition-colors"
-              >
-                <option value="">Select...</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Convert Button */}
-        <div className="flex justify-center mb-12">
-          <button
-            id="convert-button"
-            onClick={handleConvert}
-            disabled={!file || isLoading}
-            className={`
-              px-8 py-4 rounded-2xl font-semibold text-base transition-all duration-300
-              ${
-                file && !isLoading
-                  ? "bg-gradient-to-r from-accent to-cyan-500 text-black hover:shadow-lg hover:shadow-accent/20 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-                  : "bg-card border border-card-border text-muted cursor-not-allowed"
-              }
-            `}
-          >
-            {isLoading ? (
-              <span className="flex items-center gap-3">
-                <span className="spinner" />
-                Converting...
-              </span>
-            ) : (
-              "🔄 Convert to FHIR R4"
-            )}
-          </button>
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div className="glass-card p-6 mb-8 border-danger/30 bg-danger/5 fade-up">
-            <p className="text-danger font-medium">❌ {error}</p>
-          </div>
-        )}
-
-        {/* Results */}
-        {result && (
-          <div ref={resultsRef} className="space-y-6">
-            {/* Summary Bar */}
-            <div className="glass-card p-6 fade-up">
-              <div className="flex flex-wrap gap-6 items-center justify-between">
-                <div className="flex items-center gap-6">
-                  <div>
-                    <p className="text-xs text-muted uppercase tracking-wider">
-                      Format
-                    </p>
-                    <p className="text-lg font-semibold font-mono">
-                      {result.format_detected.toUpperCase()}
-                    </p>
-                  </div>
-                  <div className="w-px h-10 bg-card-border" />
-                  <div>
-                    <p className="text-xs text-muted uppercase tracking-wider">
-                      Records
-                    </p>
-                    <p className="text-lg font-semibold">
-                      {result.records_parsed}
-                    </p>
-                  </div>
-                  <div className="w-px h-10 bg-card-border" />
-                  <div>
-                    <p className="text-xs text-muted uppercase tracking-wider">
-                      Fields Mapped
-                    </p>
-                    <p className="text-lg font-semibold">
-                      {
-                        result.mapped_fields.filter(
-                          (f) => f.status === "MAPPED"
-                        ).length
-                      }
-                      <span className="text-muted font-normal">
-                        /{result.mapped_fields.length}
-                      </span>
-                    </p>
-                  </div>
-                  <div className="w-px h-10 bg-card-border" />
-                  <div>
-                    <p className="text-xs text-muted uppercase tracking-wider">
-                      FHIR Resources
-                    </p>
-                    <p className="text-lg font-semibold">
-                      {
-                        (
-                          result.fhir_bundle.entry as Array<unknown>
-                        )?.length || 0
-                      }
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={handleDownload}
-                  className="px-5 py-2.5 rounded-xl bg-accent/10 border border-accent/20 text-accent text-sm font-medium hover:bg-accent/20 transition-colors cursor-pointer"
-                >
-                  📥 Download FHIR Bundle
-                </button>
-              </div>
-            </div>
-
-            {/* Field Mapping Table */}
-            <div className="glass-card p-6 fade-up fade-up-delay-1">
-              <h3 className="text-sm font-medium text-muted uppercase tracking-wider mb-4">
-                AI Field Mapping
-              </h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-muted text-xs uppercase tracking-wider">
-                      <th className="pb-3 pr-4">Raw Field</th>
-                      <th className="pb-3 pr-4">FHIR Mapping</th>
-                      <th className="pb-3 pr-4">LOINC</th>
-                      <th className="pb-3 pr-4">Value</th>
-                      <th className="pb-3 pr-4">Confidence</th>
-                      <th className="pb-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.mapped_fields.map((field, idx) => (
-                      <tr
-                        key={idx}
-                        className="border-t border-card-border/50"
-                      >
-                        <td className="py-3 pr-4 font-mono text-accent/80">
-                          {field.raw_field}
-                        </td>
-                        <td className="py-3 pr-4">
-                          {field.display || (
-                            <span className="text-muted italic">
-                              Unknown
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 pr-4 font-mono text-muted">
-                          {field.loinc_code || "—"}
-                        </td>
-                        <td className="py-3 pr-4 text-foreground/70 max-w-[150px] truncate" title={typeof field.raw_value === 'object' ? JSON.stringify(field.raw_value) : String(field.raw_value)}>
-                          {typeof field.raw_value === 'object' && field.raw_value !== null 
-                            ? JSON.stringify(field.raw_value) 
-                            : String(field.raw_value || "—")}
-                        </td>
-                        <td className="py-3 pr-4 w-36">
-                          <div className="flex items-center gap-2">
-                            <div className="confidence-bar flex-1">
-                              <div
-                                className={`confidence-fill ${getConfidenceColor(field.confidence)}`}
-                                style={{
-                                  width: `${Math.round(field.confidence * 100)}%`,
-                                }}
-                              />
-                            </div>
-                            <span className="text-xs text-muted w-10 text-right">
-                              {Math.round(field.confidence * 100)}%
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-3">
-                          {field.status === "MAPPED" ? (
-                            <span className="text-xs px-2 py-1 rounded-full bg-success/10 text-success border border-success/20">
-                              ✓ Mapped
-                            </span>
-                          ) : (
-                            <span className="text-xs px-2 py-1 rounded-full bg-warning/10 text-warning border border-warning/20">
-                              ? Review
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Risk Assessment */}
+      {/* ─── 3 Column Dashboard ─── */}
+      <main className="flex-1 flex gap-4 p-4 overflow-hidden min-h-0">
+        
+        {/* Col 1: Input */}
+        <section className="w-80 flex flex-col shrink-0 panel">
+          <div className="panel-header">1. Data Ingestion</div>
+          <div className="panel-body flex flex-col gap-5">
+            
             <div
-              className={`glass-card p-6 fade-up fade-up-delay-2 border ${getRiskBg(result.dri_result.risk_level)}`}
+              className={`upload-area p-8 flex flex-col items-center justify-center ${isDragging ? 'active' : ''}`}
+              onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} onClick={() => fileInputRef.current?.click()}
             >
-              <h3 className="text-sm font-medium text-muted uppercase tracking-wider mb-5">
-                Decision Risk Index (DRI)
-              </h3>
-              <div className="flex flex-col md:flex-row gap-8 items-start">
-                {/* Score */}
-                <div className="text-center md:text-left flex-shrink-0">
-                  <div
-                    className={`text-6xl font-bold ${getRiskColor(result.dri_result.risk_level)}`}
-                  >
-                    {result.dri_result.dri_score}
-                    <span className="text-2xl text-muted font-normal">
-                      /100
-                    </span>
-                  </div>
-                  <p
-                    className={`text-sm font-semibold mt-1 ${getRiskColor(result.dri_result.risk_level)}`}
-                  >
-                    {result.dri_result.risk_level}
-                  </p>
-                </div>
+              <input ref={fileInputRef} type="file" onChange={handleFileChange} className="hidden" />
+              {file ? (
+                <>
+                  <svg className="w-8 h-8 text-emerald-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                  <p className="font-semibold text-sm truncate max-w-full px-2 text-slate-700">{file.name}</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{(file.size/1024).toFixed(1)} KB</p>
+                  <button onClick={(e) => { e.stopPropagation(); setFile(null); setResult(null); }} className="mt-2 text-[10px] text-red-500 hover:underline">Remove</button>
+                </>
+              ) : (
+                <>
+                  <svg className="w-6 h-6 text-slate-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                  <p className="text-xs font-semibold text-slate-600">Drop file to process</p>
+                  <p className="text-[10px] text-slate-400 mt-1">Supports CSV, JSON, SQL</p>
+                </>
+              )}
+            </div>
 
-                {/* Details */}
-                <div className="flex-1 w-full">
-                  {/* Gauge */}
-                  <div className="mb-5">
-                    <div className="risk-gauge-track relative">
-                      <div
-                        className="risk-gauge-fill absolute top-0 left-0"
-                        style={{
-                          width: `${result.dri_result.dri_score}%`,
-                          opacity: 1,
-                        }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-[10px] text-muted mt-1">
-                      <span>LOW</span>
-                      <span>MEDIUM</span>
-                      <span>HIGH</span>
-                    </div>
-                  </div>
-
-                  {/* Signals */}
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4">
-                    {Object.entries(result.dri_result.signals).map(
-                      ([key, val]) => (
-                        <div
-                          key={key}
-                          className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${
-                            val
-                              ? "bg-success/5 text-success/80"
-                              : "bg-danger/5 text-danger/80"
-                          }`}
-                        >
-                          <span>{val ? "✓" : "✗"}</span>
-                          <span>
-                            {key
-                              .replace(/_/g, " ")
-                              .replace(/\b\w/g, (c) => c.toUpperCase())}
-                          </span>
-                        </div>
-                      )
-                    )}
-                  </div>
-
-                  {/* Recommendation */}
-                  <div className="bg-card/50 rounded-lg p-4 border border-card-border">
-                    <p className="text-sm font-medium mb-1">
-                      Recommendation
-                    </p>
-                    <p className="text-sm text-muted">
-                      {result.alert.recommendation}
-                    </p>
-                  </div>
+            <div>
+              <h4 className="text-[10px] font-bold uppercase text-slate-400 mb-3 tracking-wider">Context Envelope</h4>
+              <div className="space-y-3">
+                <div><label className="form-label">Patient ID</label><input className="form-input" placeholder="e.g. PX-489" value={patientId} onChange={e=>setPatientId(e.target.value)} /></div>
+                <div className="flex gap-2">
+                  <div className="flex-1"><label className="form-label">First Name</label><input className="form-input" value={firstName} onChange={e=>setFirstName(e.target.value)} /></div>
+                  <div className="flex-1"><label className="form-label">Last Name</label><input className="form-input" value={lastName} onChange={e=>setLastName(e.target.value)} /></div>
                 </div>
               </div>
             </div>
 
-            {/* FHIR Bundle Viewer */}
-            <div className="glass-card p-6 fade-up fade-up-delay-3">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-medium text-muted uppercase tracking-wider">
-                  FHIR R4 Bundle
-                </h3>
-                <button
-                  onClick={() => setShowBundle(!showBundle)}
-                  className="text-sm text-accent hover:text-accent/80 transition-colors cursor-pointer"
-                >
-                  {showBundle ? "▼ Hide JSON" : "▶ Show JSON"}
-                </button>
+            <div className="mt-auto pt-4 border-t border-slate-100 flex flex-col gap-2">
+              {error && <div className="text-[10px] p-2 bg-red-50 text-red-600 rounded border border-red-100">{error}</div>}
+              <button
+                onClick={handleConvert} disabled={!file || isLoading}
+                className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-all ${file && !isLoading ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm' : 'bg-slate-100 text-slate-400'}`}
+              >
+                {isLoading ? "Running Pipeline..." : "Execute"}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* Col 2: Engine Status */}
+        <section className="flex-1 flex flex-col min-w-[320px] panel relative">
+          <div className="panel-header">
+            <span>2. Processing Engine</span>
+            {result && <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] flex items-center gap-1"><div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div> Complete</span>}
+          </div>
+          
+          <div className="panel-body p-0 flex flex-col overflow-hidden">
+            {isLoading ? (
+              <ProcessingAnimation />
+            ) : !result ? (
+              <PipelineDiagram />
+            ) : (
+              <div className="flex flex-col h-full"> 
+                {/* Score Header */}
+                <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex justify-between items-center shrink-0">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Quality Index</p>
+                    <div className="flex items-baseline gap-2 mt-1">
+                      <span className={`text-3xl font-extrabold tracking-tight ${result.dri_result.dri_score >= 70 ? 'text-emerald-600' : 'text-amber-500'}`}>{result.dri_result.dri_score}</span>
+                      <span className="text-[11px] font-bold uppercase rounded px-1.5 py-0.5 bg-white border border-slate-200 text-slate-600">{result.dri_result.risk_level}</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-slate-500">Processed: <span className="font-bold text-slate-700">{result.records_parsed}</span> record(s)</p>
+                    <p className="text-[10px] text-slate-400 font-mono mt-0.5 capitalize">{result.format_detected} format detected</p>
+                  </div>
+                </div>
+
+                {/* Signals row */}
+                <div className="px-4 py-3 border-b border-slate-200 shrink-0 flex flex-wrap gap-2 bg-white">
+                  {Object.entries(result.dri_result.signals)
+                    .sort(([, valA], [, valB]) => Number(valA) - Number(valB))
+                    .map(([key, val]) => (
+                    <div key={key} className={`border flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-medium whitespace-nowrap ${val ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-200 shadow-sm'}`}>
+                      {val ? '✓' : '✕'} {key.replace(/_/g, ' ')}
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Table */}
+                <div className="flex-1 overflow-y-auto">
+                  <table className="mapping-table">
+                    <thead><tr><th>Raw Field</th><th>Extracted Value</th><th>Mapped Node</th><th className="text-right">Conf.</th></tr></thead>
+                    <tbody>
+                      {result.mapped_fields.map((f, i) => (
+                        <tr key={i}>
+                          <td className="font-mono text-[10px] text-emerald-700 bg-emerald-50/30 font-semibold">{f.raw_field}</td>
+                          <td className="block max-w-[120px] truncate text-slate-500" title={typeof f.raw_value === 'object' ? JSON.stringify(f.raw_value) : String(f.raw_value)}>{typeof f.raw_value === 'object' && f.raw_value !== null ? JSON.stringify(f.raw_value) : String(f.raw_value || "—")}</td>
+                          <td>
+                            <div className="text-[11px] font-semibold text-slate-700">{f.display || "Unmapped"}</div>
+                            <div className="text-[9px] font-mono text-slate-400 mt-0.5">{f.loinc_code}</div>
+                          </td>
+                          <td className="text-right">
+                            {f.status === 'MAPPED' ? <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded">{(f.confidence*100).toFixed(0)}%</span> : <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded">REV</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
               </div>
-              {showBundle && (
-                <div className="json-viewer p-4 font-mono">
-                  <pre className="text-foreground/70 whitespace-pre-wrap break-words">
+            )}
+          </div>
+        </section>
+
+        {/* Col 3: Output */}
+        <section className="w-[400px] flex flex-col shrink-0 panel bg-white border-slate-200 shadow-sm">
+          <div className="panel-header bg-slate-50 border-b border-slate-200 text-slate-700">
+            <span>3. Output Bundle</span>
+            <div className="flex gap-2">
+              <div className="w-2 h-2 rounded-full bg-slate-200"></div>
+              <div className="w-2 h-2 rounded-full bg-slate-200"></div>
+              <div className="w-2 h-2 rounded-full bg-slate-300"></div>
+            </div>
+          </div>
+          
+          <div className="panel-body p-0 flex flex-col overflow-hidden bg-white relative">
+            {!result ? (
+              <div className="h-full flex flex-col items-center justify-center text-slate-400 p-6 text-center select-none font-mono text-[10px]">
+                 <svg className="w-8 h-8 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+                Waiting for pipeline execution...<br/><br/>
+                Output will be formatted as a valid FHIR R4 JSON Array.
+              </div>
+            ) : (
+              <>
+                <div className="absolute top-3 right-3 flex gap-2 z-10">
+                  <button onClick={handleCopy} className="bg-white hover:bg-slate-50 text-slate-600 font-medium tracking-wide text-[10px] px-2.5 py-1.5 rounded-md border border-slate-200 shadow-sm transition-colors">
+                    {copied ? 'Copied' : 'Copy JSON'}
+                  </button>
+                  <button onClick={handleDownload} className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium tracking-wide text-[10px] px-2.5 py-1.5 rounded-md border border-emerald-600 shadow-sm transition-colors">
+                    Download
+                  </button>
+                </div>
+                <div className="p-4 pt-12 overflow-auto h-full">
+                  <pre className="code-viewer border border-slate-100 shadow-inner">
                     {JSON.stringify(result.fhir_bundle, null, 2)}
                   </pre>
                 </div>
-              )}
-              {!showBundle && (
-                <p className="text-sm text-muted">
-                  Bundle contains{" "}
-                  <span className="text-foreground font-medium">
-                    {
-                      (result.fhir_bundle.entry as Array<unknown>)
-                        ?.length || 0
-                    }
-                  </span>{" "}
-                  FHIR R4 resources. Click &quot;Show JSON&quot; to view the full
-                  bundle.
-                </p>
-              )}
-            </div>
+              </>
+            )}
           </div>
-        )}
-      </main>
+        </section>
 
-      {/* Footer */}
-      <footer className="border-t border-card-border py-6 mt-auto">
-        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between text-xs text-muted">
-          <p>Samayik AI — Built for FHIR R4 compliance</p>
-          <p>LOINC codes from HL7 FHIR R4 Vital Signs Profile</p>
-        </div>
-      </footer>
+      </main>
     </div>
   );
 }
