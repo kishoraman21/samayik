@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 // ─── Types ──────────────────────────────────
 interface MappedField {
@@ -83,7 +83,18 @@ const PipelineDiagram = () => (
 );
 
 // ─── Loading State Animation ─────────────────
-const ProcessingAnimation = () => (
+const ProcessingAnimation = () => {
+  const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    // Artificial 3.5s sequence
+    const t1 = setTimeout(() => setStep(1), 800);
+    const t2 = setTimeout(() => setStep(2), 2000);
+    const t3 = setTimeout(() => setStep(3), 2900);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, []);
+
+  return (
   <div className="h-full flex flex-col items-center justify-center p-6 text-center select-none overflow-y-auto">
     <div className="flex items-center gap-2 mb-2 bg-emerald-100 border border-emerald-200 px-3 py-1 rounded-full text-[10px] uppercase font-bold text-emerald-700 tracking-wider">
       <div className="status-dot"></div> Processing
@@ -92,41 +103,64 @@ const ProcessingAnimation = () => (
     <h3 className="text-lg font-bold text-slate-800 mb-8 mt-2">Running AI Pipeline</h3>
     
     <div className="w-full max-w-[280px] flex flex-col items-center">
-      <div className="w-full bg-slate-50 border border-slate-200 py-3.5 rounded-lg shadow-sm relative z-10 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-200/50 to-transparent w-full skeleton-shimmer"></div>
-        <div className="relative text-xs font-semibold text-slate-400">Parsing Raw Data...</div>
+      
+      {/* Step 0: Parsing */}
+      <div className={`w-full py-3.5 rounded-lg shadow-sm relative z-10 overflow-hidden transition-all duration-300 border-2 ${step === 0 ? 'bg-white border-emerald-400' : step > 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200 border'}`}>
+        {step === 0 && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-100/30 to-transparent w-full skeleton-shimmer"></div>}
+        <div className={`relative text-xs font-semibold flex items-center justify-center gap-2 ${step >= 0 ? 'text-emerald-700' : 'text-slate-400'}`}>
+          {step === 0 ? <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : (step > 0 ? '✓' : '')}
+          Parsing Raw Data
+        </div>
       </div>
       
-      <div className="flow-line -my-1 relative z-0"></div>
+      <div className={`flow-line -my-1 relative z-0 transition-opacity duration-300 ${step >= 1 ? 'opacity-100' : 'opacity-30'}`} style={step >= 1 ? { background: 'linear-gradient(to bottom, #10b981 50%, transparent 50%)', backgroundSize: '100% 8px' } : {}}></div>
       
-      <div className="w-full bg-emerald-50 border border-emerald-200 py-5 rounded-xl shadow-sm relative z-10 overflow-hidden flex items-center justify-center gap-2">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-100/50 to-transparent w-full skeleton-shimmer" style={{animationDelay: '0.2s'}}></div>
-        <svg className="w-4 h-4 text-emerald-500 animate-spin relative" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        <span className="relative text-emerald-700 text-sm font-bold">Semantic Mapping</span>
+      {/* Step 1: Semantic Mapping */}
+      <div className={`w-full py-5 rounded-xl shadow-sm relative z-10 overflow-hidden transition-all duration-300 border-2 ${step === 1 ? 'bg-white border-emerald-400' : step > 1 ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200 border'}`}>
+        {step === 1 && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-100/30 to-transparent w-full skeleton-shimmer"></div>}
+        <div className={`relative text-sm font-bold flex flex-col items-center justify-center gap-1.5 ${step >= 1 ? 'text-emerald-700' : 'text-slate-400'}`}>
+          <div className="flex items-center gap-2">
+            {step === 1 ? <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : (step > 1 ? '✓' : '')}
+            Semantic Mapping
+          </div>
+          {step >= 1 && <span className="text-[10px] font-mono text-emerald-600/70 font-normal">all-MiniLM-L6-v2</span>}
+        </div>
       </div>
 
-      <div className="flow-line -my-1 relative z-0"></div>
+      <div className={`flow-line -my-1 relative z-0 transition-opacity duration-300 ${step >= 2 ? 'opacity-100' : 'opacity-30'}`} style={step >= 2 ? { background: 'linear-gradient(to bottom, #10b981 50%, transparent 50%)', backgroundSize: '100% 8px' } : {}}></div>
       
+      {/* Step 2: Knowledge Graph + Schema */}
       <div className="w-full flex gap-3 relative z-10">
-        <div className="flex-1 bg-blue-50/50 border border-blue-100 py-4 rounded-lg shadow-sm overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-100/50 to-transparent w-full skeleton-shimmer" style={{animationDelay: '0.4s'}}></div>
+        <div className={`flex-1 py-4 rounded-lg shadow-sm overflow-hidden relative transition-all duration-300 border-2 ${step === 2 ? 'bg-white border-blue-400' : step > 2 ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 border-slate-200 border'}`}>
+          {step === 2 && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-100/30 to-transparent w-full skeleton-shimmer"></div>}
+          <div className={`relative text-[10px] font-semibold flex flex-col items-center justify-center gap-1 ${step >= 2 ? 'text-blue-800' : 'text-slate-400'}`}>
+            {step === 2 ? <div className="w-2.5 h-2.5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin"></div> : (step > 2 ? '✓' : '')}
+            Schema Guard
+          </div>
         </div>
-        <div className="flex-1 bg-purple-50/50 border border-purple-100 py-4 rounded-lg shadow-sm overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-100/50 to-transparent w-full skeleton-shimmer" style={{animationDelay: '0.5s'}}></div>
+        <div className={`flex-1 py-4 rounded-lg shadow-sm overflow-hidden relative transition-all duration-300 border-2 ${step === 2 ? 'bg-white border-purple-400' : step > 2 ? 'bg-purple-50 border-purple-200' : 'bg-slate-50 border-slate-200 border'}`}>
+          {step === 2 && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-100/30 to-transparent w-full skeleton-shimmer" style={{animationDelay: '0.2s'}}></div>}
+          <div className={`relative text-[10px] font-semibold flex flex-col items-center justify-center gap-1 ${step >= 2 ? 'text-purple-800' : 'text-slate-400'}`}>
+            {step === 2 ? <div className="w-2.5 h-2.5 rounded-full border-2 border-purple-500 border-t-transparent animate-spin"></div> : (step > 2 ? '✓' : '')}
+            Knowledge Graph
+          </div>
         </div>
       </div>
 
-      <div className="flow-line -my-1 relative z-0"></div>
+      <div className={`flow-line -my-1 relative z-0 transition-opacity duration-300 ${step >= 3 ? 'opacity-100' : 'opacity-30'}`} style={step >= 3 ? { background: 'linear-gradient(to bottom, #10b981 50%, transparent 50%)', backgroundSize: '100% 8px' } : {}}></div>
 
-      <div className="w-full bg-slate-100 border border-slate-200 py-3.5 rounded-lg shadow-sm relative z-10 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-200/50 to-transparent w-full skeleton-shimmer" style={{animationDelay: '0.6s'}}></div>
+      {/* Step 3: FHIR Assembly */}
+      <div className={`w-full py-3.5 rounded-lg shadow-sm relative z-10 overflow-hidden transition-all duration-300 border-2 ${step >= 3 ? 'bg-slate-800 border-slate-600' : 'bg-slate-50 border-slate-200 border'}`}>
+        {step >= 3 && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-600/50 to-transparent w-full skeleton-shimmer"></div>}
+        <div className={`relative text-xs font-semibold flex items-center justify-center gap-2 ${step >= 3 ? 'text-slate-200' : 'text-slate-400'}`}>
+          {step >= 3 ? <svg className="w-3 h-3 animate-spin text-slate-300" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : ''}
+          FHIR R4 Generation
+        </div>
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // ─── Main Application ───────────────────────
 export default function Home() {
@@ -172,6 +206,9 @@ export default function Home() {
       const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       const res = await fetch(`${base}/convert`, { method: "POST", body: fd });
       const data = await res.json();
+      
+      // Artificial delay for the pitch demo to show off the pipeline animation
+      await new Promise((resolve) => setTimeout(resolve, 3500));
       
       if (!data.success) setError(data.error || "Failed");
       else setResult(data);
