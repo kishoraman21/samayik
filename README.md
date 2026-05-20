@@ -1,6 +1,10 @@
 # Samayik — AI-Powered Healthcare Interoperability Platform
 ### HSIL Hackathon 2026, IIT Patna *(Organized by Harvard T.H. Chan School of Public Health)*
 
+<p align="center">
+  <img src="fe/public/dashboard.png" alt="Samayik Dashboard" width="800"/>
+</p>
+
 Samayik is a state-of-the-art, privacy-preserving clinical data standardization platform. It transforms raw, heterogeneous EMR (Electronic Medical Record) datasets—such as patient demographics, vital signs, lab results, medications, and clinical notes—into valid, FHIR R4-compliant JSON bundles.
 
 The system features a **100% offline, locally cached sentence-transformer neural network** to perform semantic mapping of clinical headers to standard LOINC codes, backed by a deterministic Schema Guard, intermediate normalizers, and a clinician-facing Alert & Data Quality engine.
