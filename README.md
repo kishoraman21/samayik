@@ -2,7 +2,7 @@
 ### HSIL Hackathon 2026, IIT Patna *(Organized by Harvard T.H. Chan School of Public Health)*
 
 <p align="center">
-  <img src="fe/public/dashboard.png" alt="Samayik Dashboard" width="800"/>
+  <img src="https://github.com/kishoraman21/samayik/blob/1deb9cc8f719cd03d87fedd8e9fdf2f0b877a447/fe/public/dashboard.png" alt="Samayik Dashboard" width="800"/>
 </p>
 
 Samayik is a state-of-the-art, privacy-preserving clinical data standardization platform. It transforms raw, heterogeneous EMR (Electronic Medical Record) datasets—such as patient demographics, vital signs, lab results, medications, and clinical notes—into valid, FHIR R4-compliant JSON bundles.
