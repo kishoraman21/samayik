@@ -23,7 +23,6 @@ LOINC codes sourced from:
   HL7 FHIR R4 Official Vital Signs Profile
   https://hl7.org/fhir/R4/observation-vitalsigns.html
 """
-
 import json
 import csv
 import uuid
@@ -33,7 +32,6 @@ import os
 from datetime import datetime, timezone, timedelta
 from sentence_transformers import SentenceTransformer, util
 import torch
-
 
 # ─────────────────────────────────────────────
 # FHIR R4 LOINC CODE REGISTRY
@@ -482,6 +480,9 @@ class SemanticFieldMapper:
         
         if model_path.exists():
             print(f"[Samayik] Loading local brain from: {model_path}")
+            # ENFORCE 100% OFFLINE MODE
+            os.environ["TRANSFORMERS_OFFLINE"] = "1"
+            os.environ["HF_HUB_OFFLINE"] = "1"
             # Loading from a local path is ALWAYS 100% offline and fast
             self.model = SentenceTransformer(str(model_path), device='cpu')
         else:
