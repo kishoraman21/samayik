@@ -471,10 +471,29 @@ class SemanticFieldMapper:
         corpus = [
             f"{e['display']} {e['keywords']}" for e in self.registry
         ]
-        print("[Samayik] Loading Semantic Model (all-MiniLM-L6-v2)...")
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
+        
+        # --- ENTERPRISE LOCAL CACHE LOGIC ---
+        import os
+        from pathlib import Path
+        
+        # We store the model inside the project for 100% portability
+        base_dir = Path(__file__).parent
+        model_path = base_dir / "model_cache" / "all-MiniLM-L6-v2"
+        
+        if model_path.exists():
+            print(f"[Samayik] Loading local brain from: {model_path}")
+            # Loading from a local path is ALWAYS 100% offline and fast
+            self.model = SentenceTransformer(str(model_path), device='cpu')
+        else:
+            print("[Samayik] First run: Downloading AI model to local cache...")
+            # This only runs ONCE ever to bundle the model into the app
+            self.model = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
+            model_path.parent.mkdir(exist_ok=True)
+            self.model.save(str(model_path))
+            print(f"[Samayik] Brain archived to: {model_path}")
+            
         self.corpus_embeddings = self.model.encode(corpus, convert_to_tensor=True)
-        print(f"[Samayik] Mapper ready — {len(self.registry)} LOINC codes indexed.")
+        print(f"[Samayik] Mapper ready — 100% Portable & Offline | {len(self.registry)} LOINC codes indexed.")
 
     def map(self, raw_field: str) -> dict:
         cleaned = re.sub(r'[_\-]', ' ', raw_field).lower().strip()
