@@ -13,7 +13,7 @@ The system features a **100% offline, locally cached sentence-transformer neural
 
 ## 🏗️ System Architecture & Data Flow
 
-<img src="fe/public/system_architecture.png" alt="Samayik Architecture" width="600"/>
+<img align="center" src="fe/public/system_architecture.png" alt="Samayik Architecture" width="900"/>
 
 <details>
 <summary><b>View Mermaid Diagram Source</b></summary>
